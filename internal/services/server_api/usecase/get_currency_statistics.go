@@ -51,23 +51,25 @@ func (g *GetCurrencyStatistics) GetStatistics(
 		}
 	}
 
-	newRates := make([]entities.CurrencyRate, 0, len(missingArr))
 	if len(missingArr) > 0 {
-		rates, err := g.client.Fetch(ctx, missingArr)
-		if err != nil {
-			return nil, err
+		newRates := make([]entities.CurrencyRate, 0, len(missingArr))
+		if len(missingArr) > 0 {
+			rates, err := g.client.Fetch(ctx, missingArr)
+			if err != nil {
+				return nil, err
+			}
+			newRates = append(newRates, rates...)
 		}
-		newRates = append(newRates, rates...)
-	}
 
-	for _, rate := range newRates {
-		stats = append(stats, entities.CurrencyStatistics{
-			Currency:          rate.Currency,
-			CurrentPrice:      rate.Price,
-			LowestPriceDaily:  rate.Price,
-			HighestPriceDaily: rate.Price,
-			ChangeHourPercent: 0,
-		})
+		for _, rate := range newRates {
+			stats = append(stats, entities.CurrencyStatistics{
+				Currency:          rate.Currency,
+				CurrentPrice:      rate.Price,
+				LowestPriceDaily:  rate.Price,
+				HighestPriceDaily: rate.Price,
+				ChangeHourPercent: 0,
+			})
+		}
 	}
 
 	return stats, nil

@@ -89,7 +89,6 @@ func (u *UpdateService) Execute(ctx context.Context) error {
 					continue
 				}
 			}
-
 		case <-ticker.C:
 			if len(msgs) > 0 {
 				ctxWithTimeoutFlush, cancelFlush := context.WithTimeout(ctx, 1*time.Second)
