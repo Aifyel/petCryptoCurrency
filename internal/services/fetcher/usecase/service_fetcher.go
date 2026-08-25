@@ -107,7 +107,7 @@ func (f *FetchService) FetchNewRates(ctx context.Context, currencies []string) (
 	if err != nil {
 		resultErr = errors.Join(resultErr, err)
 	}
-	// 2. вызвать f.producer.Produce(ctx, rates), ошибку тоже сохранить
+
 	ctxWithTimeoutProduce, cancelProduce := context.WithTimeout(ctx, 1*time.Second)
 	defer cancelProduce()
 

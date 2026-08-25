@@ -7,9 +7,3 @@ type CurrencyStatistics struct {
 	HighestPriceDaily float64
 	ChangeHourPercent float64
 }
-
-/*func NewCurrencyStatistics() (*CurrencyStatistics,error) {
-	return &CurrencyStatistics{
-		Currency:
-	},nil
-}*/
