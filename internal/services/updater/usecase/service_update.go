@@ -3,7 +3,7 @@ package usecase
 import (
 	"context"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -23,11 +23,11 @@ type UpdateService struct {
 
 func NewUpdateService(repo RateRepository, consumer Consumer) (*UpdateService, error) {
 	if consumer == nil {
-		return nil, errors.New("consumer cannot be nil")
+		return nil, fmt.Errorf("updater consumer: %w", entities.ErrInvalidParams)
 	}
 
 	if repo == nil {
-		return nil, errors.New("repo cannot be nil")
+		return nil, fmt.Errorf("updater repository: %w", entities.ErrInvalidParams)
 	}
 
 	return &UpdateService{
@@ -44,7 +44,7 @@ func (u *UpdateService) Execute(ctx context.Context) error {
 		for {
 			msg, err := u.consumer.ReadMessage(ctx)
 			if err != nil {
-				msgErrCh <- err
+				msgErrCh <- fmt.Errorf("updater ReadMessage: %w, %w", entities.ErrMessagingFailure, err)
 				return
 			}
 
@@ -72,7 +72,8 @@ func (u *UpdateService) Execute(ctx context.Context) error {
 			var rate entities.CurrencyRate
 			err := json.Unmarshal(msg.Value, &rate)
 			if err != nil {
-				log.Printf("failed to unmarshal rate json: %v", err)
+				logErr := fmt.Errorf("update rate: %w, %w", entities.ErrInvalidMessage, err)
+				log.Printf("%v\n", logErr)
 				continue
 			}
 
@@ -107,12 +108,12 @@ func (u *UpdateService) Execute(ctx context.Context) error {
 func (u *UpdateService) flush(ctx context.Context, rates *[]entities.CurrencyRate, msgs *[]kafka.Message) error {
 	err := u.repo.Save(ctx, *rates)
 	if err != nil {
-		return err
+		return fmt.Errorf("updater Save: %w, %w", entities.ErrRepositoryFailure, err)
 	}
 
 	err = u.consumer.CommitMessages(ctx, *msgs...)
 	if err != nil {
-		return err
+		return fmt.Errorf("updater CommitMessages: %w, %w", entities.ErrMessagingFailure, err)
 	}
 
 	*rates = (*rates)[:0]

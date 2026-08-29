@@ -3,7 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
-	"log"
+	"fmt"
 	"time"
 
 	"github.com/Aifyel/petCryptoCurrency/internal/entities"
@@ -21,15 +21,15 @@ func NewFetchService(
 	producer Producer,
 ) (*FetchService, error) {
 	if repo == nil {
-		return nil, errors.New("repo cannot be nil")
+		return nil, fmt.Errorf("fetcher repository: %w", entities.ErrInvalidParams)
 	}
 
 	if client == nil {
-		return nil, errors.New("client cannot be nil")
+		return nil, fmt.Errorf("fetcher client: %w", entities.ErrInvalidParams)
 	}
 
 	if producer == nil {
-		return nil, errors.New("publisher cannot be nil")
+		return nil, fmt.Errorf("fetcher producer: %w", entities.ErrInvalidParams)
 	}
 
 	return &FetchService{
@@ -47,7 +47,7 @@ func (f *FetchService) UpdateRates(
 
 	currencyList, err := f.repo.GetCurrencies(ctxWithTimeoutRepo)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("fetcher GetCurrencies: %w, %w", entities.ErrRepositoryFailure, err)
 	}
 
 	ctxWithTimeoutFetch, cancel := context.WithTimeout(ctx, 1*time.Second)
@@ -55,33 +55,15 @@ func (f *FetchService) UpdateRates(
 
 	fetchedRates, err := f.client.Fetch(ctxWithTimeoutFetch, currencyList)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("fetcher Fetch: %w, %w", entities.ErrClientFailure, err)
 	}
 
 	err = f.producer.Produce(ctx, fetchedRates)
 	if err != nil {
-		return fetchedRates, err
+		return fetchedRates, fmt.Errorf("fetcher Produce: %w, %w", entities.ErrMessagingFailure, err)
 	}
 
 	return fetchedRates, nil
-}
-
-func (f *FetchService) RunScheduler(ctx context.Context) error {
-	ticker := time.NewTicker(5 * time.Minute)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-ticker.C:
-			_, err := f.UpdateRates(ctx)
-			if err != nil {
-				log.Printf("failed to update rates: %v", err)
-				continue
-			}
-		}
-	}
 }
 
 func (f *FetchService) FetchNewRates(ctx context.Context, currencies []string) ([]entities.CurrencyRate, error) {
@@ -90,7 +72,7 @@ func (f *FetchService) FetchNewRates(ctx context.Context, currencies []string) (
 
 	fetchedRates, err := f.client.Fetch(ctxWithTimeoutFetch, currencies)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("fetcher Fetch: %w, %w", entities.ErrClientFailure, err)
 	}
 
 	currency := make([]string, 0, len(fetchedRates))
@@ -105,7 +87,7 @@ func (f *FetchService) FetchNewRates(ctx context.Context, currencies []string) (
 
 	err = f.repo.SaveNewCurrency(ctxWithTimeoutRepo, currency)
 	if err != nil {
-		resultErr = errors.Join(resultErr, err)
+		resultErr = errors.Join(resultErr, fmt.Errorf("fetcher SaveNewCurrency: %w, %w", entities.ErrRepositoryFailure, err))
 	}
 
 	ctxWithTimeoutProduce, cancelProduce := context.WithTimeout(ctx, 1*time.Second)
@@ -113,7 +95,7 @@ func (f *FetchService) FetchNewRates(ctx context.Context, currencies []string) (
 
 	err = f.producer.Produce(ctxWithTimeoutProduce, fetchedRates)
 	if err != nil {
-		resultErr = errors.Join(resultErr, err)
+		resultErr = errors.Join(resultErr, fmt.Errorf("fetcher Produce: %w, %w", entities.ErrMessagingFailure, err))
 	}
 
 	return fetchedRates, resultErr

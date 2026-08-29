@@ -2,7 +2,7 @@ package usecase
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
 	"github.com/Aifyel/petCryptoCurrency/internal/entities"
 )
@@ -17,11 +17,11 @@ func NewGetCurrencyStatistics(
 	client FetcherClient,
 ) (*GetCurrencyStatistics, error) {
 	if client == nil {
-		return nil, errors.New("client cannot be nil")
+		return nil, fmt.Errorf("server client: %w", entities.ErrInvalidParams)
 	}
 
 	if repo == nil {
-		return nil, errors.New("repo cannot be nil")
+		return nil, fmt.Errorf("server repository: %w", entities.ErrInvalidParams)
 	}
 
 	return &GetCurrencyStatistics{
@@ -34,9 +34,13 @@ func (g *GetCurrencyStatistics) GetStatistics(
 	ctx context.Context,
 	currency []string,
 ) ([]entities.CurrencyStatistics, error) {
+	if len(currency) == 0 {
+		return nil, fmt.Errorf("server empty currency slice: %w", entities.ErrInvalidParams)
+	}
+
 	stats, err := g.repo.GetStatistics(ctx, currency)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("server GetStatistics: %w, %w", entities.ErrRepositoryFailure, err)
 	}
 
 	currencyMap := make(map[string]struct{})
@@ -56,7 +60,7 @@ func (g *GetCurrencyStatistics) GetStatistics(
 		if len(missingArr) > 0 {
 			rates, err := g.client.Fetch(ctx, missingArr)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("server Fetch: %w, %w", entities.ErrClientFailure, err)
 			}
 			newRates = append(newRates, rates...)
 		}
