@@ -1,7 +1,7 @@
 package entities
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 )
 
 type CurrencyStatistics struct {
@@ -14,19 +14,19 @@ type CurrencyStatistics struct {
 
 func NewCurrencyStatistics(c string, cp float64, lp float64, hp float64, chp float64) (*CurrencyStatistics, error) {
 	if c == "" {
-		return nil, fmt.Errorf("CurrencyStatistics currency: %w", ErrInvalidParams)
+		return nil, errors.Wrap(ErrInvalidParams, "CurrencyStatistics currency:")
 	}
 	if cp < 0 {
-		return nil, fmt.Errorf("CurrencyStatistics price: %w", ErrInvalidParams)
+		return nil, errors.Wrap(ErrInvalidParams, "CurrencyStatistics currentPrice:")
 	}
 	if lp < 0 {
-		return nil, fmt.Errorf("CurrencyStatistics lowest price: %w", ErrInvalidParams)
+		return nil, errors.Wrap(ErrInvalidParams, "CurrencyStatistics lowestPrice:")
 	}
 	if hp < 0 {
-		return nil, fmt.Errorf("CurrencyStatistics highest price: %w", ErrInvalidParams)
+		return nil, errors.Wrap(ErrInvalidParams, "CurrencyStatistics highestPrice:")
 	}
 	if lp > hp {
-		return nil, fmt.Errorf("CurrencyStatistics highest price: %w", ErrInvalidParams)
+		return nil, errors.Wrap(ErrInvalidParams, "lowerPrice should not be greater than highPrice:")
 	}
 
 	return &CurrencyStatistics{

@@ -3,11 +3,11 @@ package usecase
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"time"
 
 	"github.com/Aifyel/petCryptoCurrency/internal/entities"
+	"github.com/pkg/errors"
 	"github.com/segmentio/kafka-go"
 )
 
@@ -23,11 +23,11 @@ type UpdateService struct {
 
 func NewUpdateService(repo RateRepository, consumer Consumer) (*UpdateService, error) {
 	if consumer == nil {
-		return nil, fmt.Errorf("updater consumer: %w", entities.ErrInvalidParams)
+		return nil, errors.Wrap(entities.ErrInvalidParams, "service_updater Consumer:")
 	}
 
 	if repo == nil {
-		return nil, fmt.Errorf("updater repository: %w", entities.ErrInvalidParams)
+		return nil, errors.Wrap(entities.ErrInvalidParams, "service_updater Repository:")
 	}
 
 	return &UpdateService{
@@ -44,7 +44,7 @@ func (u *UpdateService) Execute(ctx context.Context) error {
 		for {
 			msg, err := u.consumer.ReadMessage(ctx)
 			if err != nil {
-				msgErrCh <- fmt.Errorf("updater ReadMessage: %w, %w", entities.ErrMessagingFailure, err)
+				msgErrCh <- errors.Wrap(entities.ErrMessagingFailure, "service_updater ReadMessage:")
 				return
 			}
 
@@ -72,7 +72,7 @@ func (u *UpdateService) Execute(ctx context.Context) error {
 			var rate entities.CurrencyRate
 			err := json.Unmarshal(msg.Value, &rate)
 			if err != nil {
-				logErr := fmt.Errorf("update rate: %w, %w", entities.ErrInvalidMessage, err)
+				logErr := errors.Wrap(entities.ErrInvalidMessage, "service_updater Unmarshal Message:")
 				log.Printf("%v\n", logErr)
 				continue
 			}
@@ -108,12 +108,12 @@ func (u *UpdateService) Execute(ctx context.Context) error {
 func (u *UpdateService) flush(ctx context.Context, rates *[]entities.CurrencyRate, msgs *[]kafka.Message) error {
 	err := u.repo.Save(ctx, *rates)
 	if err != nil {
-		return fmt.Errorf("updater Save: %w, %w", entities.ErrRepositoryFailure, err)
+		return errors.Wrap(entities.ErrRepositoryFailure, "service_updater Save:")
 	}
 
 	err = u.consumer.CommitMessages(ctx, *msgs...)
 	if err != nil {
-		return fmt.Errorf("updater CommitMessages: %w, %w", entities.ErrMessagingFailure, err)
+		return errors.Wrap(entities.ErrMessagingFailure, "service_updater CommitMessages:")
 	}
 
 	*rates = (*rates)[:0]

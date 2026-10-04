@@ -2,9 +2,9 @@ package usecase
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/Aifyel/petCryptoCurrency/internal/entities"
+	"github.com/pkg/errors"
 )
 
 type GetCurrencyStatistics struct {
@@ -17,11 +17,11 @@ func NewGetCurrencyStatistics(
 	client FetcherClient,
 ) (*GetCurrencyStatistics, error) {
 	if client == nil {
-		return nil, fmt.Errorf("server client: %w", entities.ErrInvalidParams)
+		return nil, errors.Wrap(entities.ErrInvalidParams, "serverApi Client:")
 	}
 
 	if repo == nil {
-		return nil, fmt.Errorf("server repository: %w", entities.ErrInvalidParams)
+		return nil, errors.Wrap(entities.ErrInvalidParams, "serverApi Repository:")
 	}
 
 	return &GetCurrencyStatistics{
@@ -35,12 +35,12 @@ func (g *GetCurrencyStatistics) GetStatistics(
 	currency []string,
 ) ([]entities.CurrencyStatistics, error) {
 	if len(currency) == 0 {
-		return nil, fmt.Errorf("server empty currency slice: %w", entities.ErrInvalidParams)
+		return nil, errors.Wrap(entities.ErrInvalidParams, "serverApi Currency List:")
 	}
 
 	stats, err := g.repo.GetStatistics(ctx, currency)
 	if err != nil {
-		return nil, fmt.Errorf("server GetStatistics: %w, %w", entities.ErrRepositoryFailure, err)
+		return nil, errors.Wrap(entities.ErrRepositoryFailure, "serverApi GetStatistics:")
 	}
 
 	currencyMap := make(map[string]struct{})
@@ -60,7 +60,7 @@ func (g *GetCurrencyStatistics) GetStatistics(
 		if len(missingArr) > 0 {
 			rates, err := g.client.Fetch(ctx, missingArr)
 			if err != nil {
-				return nil, fmt.Errorf("server Fetch: %w, %w", entities.ErrClientFailure, err)
+				return nil, errors.Wrap(entities.ErrClientFailure, "serverApi Fetch:")
 			}
 			newRates = append(newRates, rates...)
 		}

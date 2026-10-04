@@ -1,8 +1,9 @@
 package entities
 
 import (
-	"fmt"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 type CurrencyRate struct {
@@ -13,10 +14,10 @@ type CurrencyRate struct {
 
 func NewCurrencyRate(c string, p float64, f time.Time) (*CurrencyRate, error) {
 	if c == "" {
-		return nil, fmt.Errorf("currencyRate currency: %w", ErrInvalidParams)
+		return nil, errors.Wrap(ErrInvalidParams, "currencyRate currency:")
 	}
 	if p < 0 {
-		return nil, fmt.Errorf("currencyRate price: %w", ErrInvalidParams)
+		return nil, errors.Wrap(ErrInvalidParams, "currencyRate price:")
 	}
 
 	return &CurrencyRate{
