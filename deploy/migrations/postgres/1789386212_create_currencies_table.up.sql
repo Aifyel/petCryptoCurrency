@@ -1,5 +1,3 @@
 CREATE TABLE currencies (
-                            currency VARCHAR(10)
+                            currency VARCHAR(10) PRIMARY KEY
 );
-
-//миграции через докер

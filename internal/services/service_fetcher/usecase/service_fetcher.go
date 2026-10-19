@@ -15,6 +15,11 @@ type FetchService struct {
 	producer Producer
 }
 
+func (f *FetchService) mustEmbedUnimplementedFetcherServiceServer() {
+	//TODO implement me
+	panic("implement me")
+}
+
 func NewFetchService(
 	repo Repository,
 	client APIClient,
@@ -42,7 +47,7 @@ func NewFetchService(
 func (f *FetchService) UpdateRates(
 	ctx context.Context,
 ) error {
-	ctxWithTimeoutRepo, cancel := context.WithTimeout(ctx, 1*time.Second)
+	ctxWithTimeoutRepo, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	currencyList, err := f.repo.GetCurrencies(ctxWithTimeoutRepo)
@@ -50,7 +55,7 @@ func (f *FetchService) UpdateRates(
 		return errors.Wrap(entities.ErrRepositoryFailure, "service_fetcher Repository:")
 	}
 
-	ctxWithTimeoutFetch, cancel := context.WithTimeout(ctx, 1*time.Second)
+	ctxWithTimeoutFetch, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	fetchedRates, err := f.client.Fetch(ctxWithTimeoutFetch, currencyList)
@@ -67,7 +72,7 @@ func (f *FetchService) UpdateRates(
 }
 
 func (f *FetchService) FetchNewRates(ctx context.Context, currencies []string) ([]entities.CurrencyRate, error) {
-	ctxWithTimeoutFetch, cancelFetch := context.WithTimeout(ctx, 1*time.Second)
+	ctxWithTimeoutFetch, cancelFetch := context.WithTimeout(ctx, 10*time.Second)
 	defer cancelFetch()
 
 	fetchedRates, err := f.client.Fetch(ctxWithTimeoutFetch, currencies)
@@ -80,7 +85,7 @@ func (f *FetchService) FetchNewRates(ctx context.Context, currencies []string) (
 		currency = append(currency, rate.Currency)
 	}
 
-	ctxWithTimeoutRepo, cancelRepo := context.WithTimeout(ctx, 1*time.Second)
+	ctxWithTimeoutRepo, cancelRepo := context.WithTimeout(ctx, 10*time.Second)
 	defer cancelRepo()
 
 	var resultErr error
@@ -90,7 +95,7 @@ func (f *FetchService) FetchNewRates(ctx context.Context, currencies []string) (
 		resultErr = errorsBase.Join(resultErr, errors.Wrap(entities.ErrRepositoryFailure, "service_fetcher SaveNewCurrency:"))
 	}
 
-	ctxWithTimeoutProduce, cancelProduce := context.WithTimeout(ctx, 1*time.Second)
+	ctxWithTimeoutProduce, cancelProduce := context.WithTimeout(ctx, 10*time.Second)
 	defer cancelProduce()
 
 	err = f.producer.Produce(ctxWithTimeoutProduce, fetchedRates, TopicNew)

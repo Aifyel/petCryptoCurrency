@@ -59,9 +59,17 @@ type Repository struct {
 
 func NewRepository(ctx context.Context, connString string) (*Repository, error) {
 	if connString == "" {
+		return nil, errors.Wrap(entities.ErrInvalidParams, "repository: invalid connection string")
 	}
+
 	pool, err := pgxpool.New(ctx, connString)
 	if err != nil {
+		return nil, errors.Wrap(entities.ErrRepositoryFailure, "repository: failure pool create")
+	}
+
+	err = pool.Ping(ctx)
+	if err != nil {
+		return nil, errors.Wrap(entities.ErrRepositoryFailure, "repository: failure pool ping")
 	}
 
 	return &Repository{
@@ -103,4 +111,8 @@ func (r *Repository) GetStatistics(ctx context.Context, currencies []string) ([]
 	}
 
 	return stats, nil
+}
+
+func (r *Repository) Close() {
+	r.pool.Close()
 }

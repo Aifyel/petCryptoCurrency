@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"log"
 
+	errorsbase "errors"
+
 	"github.com/Aifyel/petCryptoCurrency/internal/entities"
 	"github.com/Aifyel/petCryptoCurrency/internal/services/service_fetcher/usecase"
 	"github.com/pkg/errors"
@@ -57,13 +59,15 @@ func (p *Producer) Produce(ctx context.Context, rate []entities.CurrencyRate, to
 }
 
 func (p *Producer) Close() error {
+	var errs error
+
 	if err := p.scheduled.Close(); err != nil {
-		log.Printf("broker_producer: failed to close scheduled writer: %v", err)
+		errs = errorsbase.Join(errs, errors.Wrap(err, "broker_producer: failed to close writer: scheduled"))
 	}
 
 	if err := p.new.Close(); err != nil {
-		log.Printf("broker_producer: failed to close new writer: %v", err)
+		errs = errorsbase.Join(errs, errors.Wrap(err, "broker_producer: failed to close writer: new"))
 	}
 
-	return nil
+	return errs
 }

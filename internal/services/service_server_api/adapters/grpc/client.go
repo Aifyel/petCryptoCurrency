@@ -3,8 +3,8 @@ package grpc
 import (
 	"context"
 
+	"github.com/Aifyel/petCryptoCurrency/deploy/proto/gen"
 	"github.com/Aifyel/petCryptoCurrency/internal/entities"
-	"github.com/Aifyel/petcrypto-proto/gen"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )

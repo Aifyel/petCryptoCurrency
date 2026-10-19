@@ -37,7 +37,7 @@ func NewClient(url string, minInterval time.Duration) (*Client, error) {
 
 	return &Client{
 		httpClient: &http.Client{
-			Timeout: time.Second * 5,
+			Timeout: time.Second * 10,
 		},
 		baseURL:     url,
 		minInterval: minInterval,

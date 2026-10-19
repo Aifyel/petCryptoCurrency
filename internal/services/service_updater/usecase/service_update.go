@@ -38,13 +38,16 @@ func NewUpdateService(repo RateRepository, consumer Consumer) (*UpdateService, e
 
 func (u *UpdateService) Execute(ctx context.Context) error {
 	msgCh := make(chan kafka.Message)
-	msgErrCh := make(chan error)
+	msgErrCh := make(chan error, 1)
 
 	go func() {
 		for {
 			msg, err := u.consumer.ReadMessage(ctx)
 			if err != nil {
-				msgErrCh <- errors.Wrap(entities.ErrMessagingFailure, "service_updater ReadMessage:")
+				if ctx.Err() != nil {
+					return
+				}
+				msgErrCh <- errors.Wrap(entities.ErrMessagingFailure, "updater: read message")
 				return
 			}
 

@@ -40,3 +40,7 @@ func (r *Repository) Save(ctx context.Context, currency []entities.CurrencyRate)
 	}
 	return nil
 }
+
+func (r *Repository) Close() {
+	r.pool.Close()
+}

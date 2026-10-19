@@ -17,6 +17,7 @@ func NewRepository(ctx context.Context, connString string) (*Repository, error) 
 	if connString == "" {
 		return nil, errors.Wrap(entities.ErrInvalidParams, "repository: invalid connection string")
 	}
+
 	pool, err := pgxpool.New(ctx, connString)
 	if err != nil {
 		return nil, errors.Wrap(entities.ErrRepositoryFailure, "repository: failure pool create")
@@ -80,4 +81,7 @@ func (r *Repository) SaveNewCurrency(ctx context.Context, currencies []string) e
 	}
 
 	return nil
+}
+func (r *Repository) Close() {
+	r.pool.Close()
 }

@@ -1,10 +1,10 @@
-package grpc
+package grpcport
 
 import (
 	"context"
 
+	"github.com/Aifyel/petCryptoCurrency/deploy/proto/gen"
 	"github.com/Aifyel/petCryptoCurrency/internal/entities"
-	"github.com/Aifyel/petcrypto-proto/gen"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -15,8 +15,8 @@ type Executor interface {
 	FetchNewRates(ctx context.Context, currencies []string) ([]entities.CurrencyRate, error)
 }
 type Server struct {
-	gen.UnimplementedFetcherServiceServer
 	executor Executor
+	gen.UnimplementedFetcherServiceServer
 }
 
 func NewServer(executor Executor) (*Server, error) {
