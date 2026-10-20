@@ -63,7 +63,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 		}
 	}()
 
-	grpcHandler, err := grpcport.NewServer(fetchService)
+	grpcHandler, err := grpcport.NewServer(fetchService, logger.Log)
 	if err != nil {
 		return errors.Wrap(err, "fetcher_app: failed to create grpc handler")
 	}
