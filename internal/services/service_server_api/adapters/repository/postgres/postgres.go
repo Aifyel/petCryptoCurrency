@@ -2,11 +2,11 @@ package postgres
 
 import (
 	"context"
-	"log"
 
 	"github.com/Aifyel/petCryptoCurrency/internal/entities"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
 )
 
 const statsReq = `
@@ -54,18 +54,32 @@ LEFT JOIN hour_ago_price hap ON cp.currency = hap.currency
 `
 
 type Repository struct {
-	pool *pgxpool.Pool
+	pool   *pgxpool.Pool
+	logger *zap.Logger
 }
 
-func NewRepository(ctx context.Context, connString string) (*Repository, error) {
+func NewRepository(ctx context.Context, connString string, logger *zap.Logger) (*Repository, error) {
 	if connString == "" {
+		return nil, errors.Wrap(entities.ErrInvalidParams, "repository: invalid connection string")
 	}
+
 	pool, err := pgxpool.New(ctx, connString)
 	if err != nil {
+		return nil, errors.Wrap(entities.ErrRepositoryFailure, "repository: failure pool create")
+	}
+
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+
+	err = pool.Ping(ctx)
+	if err != nil {
+		return nil, errors.Wrap(entities.ErrRepositoryFailure, "repository: failure pool ping")
 	}
 
 	return &Repository{
-		pool: pool,
+		pool:   pool,
+		logger: logger,
 	}, nil
 }
 
@@ -77,7 +91,7 @@ func (r *Repository) GetStatistics(ctx context.Context, currencies []string) ([]
 
 	defer rows.Close()
 
-	var stats []entities.CurrencyStatistics
+	stats := make([]entities.CurrencyStatistics, 0, len(currencies))
 	for rows.Next() {
 		var (
 			currency                                     string
@@ -90,7 +104,10 @@ func (r *Repository) GetStatistics(ctx context.Context, currencies []string) ([]
 
 		currencyStatistics, err := entities.NewCurrencyStatistics(currency, currentPrice, lowest, highest, changePercent)
 		if err != nil {
-			log.Printf("%v", errors.Wrap(entities.ErrInvalidParams, "repository: new currency statistics"))
+			r.logger.Error("repository: new currency statistics validation failed",
+				zap.String("currency", currency),
+				zap.Error(err),
+			)
 			continue
 		}
 
@@ -103,4 +120,8 @@ func (r *Repository) GetStatistics(ctx context.Context, currencies []string) ([]
 	}
 
 	return stats, nil
+}
+
+func (r *Repository) Close() {
+	r.pool.Close()
 }

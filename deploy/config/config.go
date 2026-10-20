@@ -14,36 +14,37 @@ type Config struct {
 	CoingeckoInterval time.Duration `mapstructure:"coingecko_interval"`
 	GRPCPort          string        `mapstructure:"grpc_port"`
 	KafkaBrokers      []string      `mapstructure:"kafka_brokers"`
+	KafkaGroupID      string        `mapstructure:"kafka_group_id"`
+	GRPCServerAddress string        `mapstructure:"grpc_server_address"`
+	HTTPPort          string        `mapstructure:"http_port"`
 }
 
 func Load() (*Config, error) {
-	err := viper.BindEnv("database_url", "DATABASE_URL")
-	if err != nil {
-		return nil, errors.Wrap(entities.ErrInvalidParams, "config: database_url")
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath(".")
+
+	_ = viper.ReadInConfig()
+
+	bindings := map[string]string{
+		"database_url":        "DATABASE_URL",
+		"coingecko_url":       "COINGECKO_URL",
+		"coingecko_interval":  "COINGECKO_INTERVAL",
+		"grpc_port":           "GRPC_PORT",
+		"kafka_brokers":       "KAFKA_BROKERS",
+		"kafka_group_id":      "KAFKA_GROUP_ID",
+		"grpc_server_address": "GRPC_SERVER_ADDRESS",
+		"http_port":           "HTTP_PORT",
 	}
 
-	err = viper.BindEnv("coingecko_url", "COINGECKO_URL")
-	if err != nil {
-		return nil, errors.Wrap(entities.ErrInvalidParams, "config: coingecko_url")
+	for key, envVar := range bindings {
+		if err := viper.BindEnv(key, envVar); err != nil {
+			return nil, errors.Wrap(entities.ErrInvalidParams, "config: "+key)
+		}
 	}
 
-	err = viper.BindEnv("coingecko_interval", "COINGECKO_INTERVAL")
-	if err != nil {
-		return nil, errors.Wrap(entities.ErrInvalidParams, "config: coingecko_interval")
-	}
-
-	err = viper.BindEnv("grpc_port", "GRPC_PORT")
-	if err != nil {
-		return nil, errors.Wrap(entities.ErrInvalidParams, "config: grpc_address")
-	}
-
-	err = viper.BindEnv("kafka_brokers", "KAFKA_BROKERS")
-	if err != nil {
-		return nil, errors.Wrap(entities.ErrInvalidParams, "config: kafka_brokers")
-	}
 	var config Config
-	err = viper.Unmarshal(&config)
-	if err != nil {
+	if err := viper.Unmarshal(&config); err != nil {
 		return nil, errors.Wrap(entities.ErrInvalidParams, "config: unmarshal")
 	}
 

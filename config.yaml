@@ -1,0 +1,9 @@
+database_url: "postgres://postgres:postgres@localhost:5432/petcrypto?sslmode=disable"
+coingecko_url: "https://api.coingecko.com/api/v3/simple/price"
+coingecko_interval: "2s"
+grpc_port: ":50051"
+kafka_brokers:
+  - "localhost:9092"
+kafka_group_id: "updater-group"
+grpc_server_address: "localhost:50051"
+http_port: ":8080"

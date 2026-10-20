@@ -22,6 +22,7 @@ type UpdateService struct {
 }
 
 func NewUpdateService(repo RateRepository, consumer Consumer) (*UpdateService, error) {
+	log.Println("initializing kafka consumer...")
 	if consumer == nil {
 		return nil, errors.Wrap(entities.ErrInvalidParams, "service_updater Consumer:")
 	}
@@ -38,13 +39,16 @@ func NewUpdateService(repo RateRepository, consumer Consumer) (*UpdateService, e
 
 func (u *UpdateService) Execute(ctx context.Context) error {
 	msgCh := make(chan kafka.Message)
-	msgErrCh := make(chan error)
+	msgErrCh := make(chan error, 1)
 
 	go func() {
 		for {
 			msg, err := u.consumer.ReadMessage(ctx)
 			if err != nil {
-				msgErrCh <- errors.Wrap(entities.ErrMessagingFailure, "service_updater ReadMessage:")
+				if ctx.Err() != nil {
+					return
+				}
+				msgErrCh <- errors.Wrap(entities.ErrMessagingFailure, "updater: read message")
 				return
 			}
 
@@ -69,6 +73,8 @@ func (u *UpdateService) Execute(ctx context.Context) error {
 		case err := <-msgErrCh:
 			return err
 		case msg := <-msgCh:
+			log.Printf("updater received message from topic %s: %s", msg.Topic, string(msg.Value))
+
 			var rate entities.CurrencyRate
 			err := json.Unmarshal(msg.Value, &rate)
 			if err != nil {
@@ -77,11 +83,13 @@ func (u *UpdateService) Execute(ctx context.Context) error {
 				continue
 			}
 
+			log.Printf("updater successfully unmarshaled rate: %+v", rate)
+
 			rates = append(rates, rate)
 			msgs = append(msgs, msg)
 
 			if len(msgs) >= maxSize {
-				ctxWithTimeoutFlush, cancelFlush := context.WithTimeout(ctx, 1*time.Second)
+				ctxWithTimeoutFlush, cancelFlush := context.WithTimeout(ctx, 10*time.Second)
 
 				err = u.flush(ctxWithTimeoutFlush, &rates, &msgs)
 				cancelFlush()
@@ -92,7 +100,7 @@ func (u *UpdateService) Execute(ctx context.Context) error {
 			}
 		case <-ticker.C:
 			if len(msgs) > 0 {
-				ctxWithTimeoutFlush, cancelFlush := context.WithTimeout(ctx, 1*time.Second)
+				ctxWithTimeoutFlush, cancelFlush := context.WithTimeout(ctx, 10*time.Second)
 
 				err := u.flush(ctxWithTimeoutFlush, &rates, &msgs)
 				cancelFlush()
@@ -108,8 +116,11 @@ func (u *UpdateService) Execute(ctx context.Context) error {
 func (u *UpdateService) flush(ctx context.Context, rates *[]entities.CurrencyRate, msgs *[]kafka.Message) error {
 	err := u.repo.Save(ctx, *rates)
 	if err != nil {
+		log.Printf("updater failed to save to db: %v", err)
 		return errors.Wrap(entities.ErrRepositoryFailure, "service_updater Save:")
 	}
+
+	log.Printf("updater successfully saved %d rates to database", len(*rates))
 
 	err = u.consumer.CommitMessages(ctx, *msgs...)
 	if err != nil {
