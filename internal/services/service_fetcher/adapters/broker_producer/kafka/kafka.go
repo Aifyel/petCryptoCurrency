@@ -3,29 +3,34 @@ package kafka
 import (
 	"context"
 	"encoding/json"
-	"log"
-
 	errorsbase "errors"
 
 	"github.com/Aifyel/petCryptoCurrency/internal/entities"
 	"github.com/Aifyel/petCryptoCurrency/internal/services/service_fetcher/usecase"
 	"github.com/pkg/errors"
 	"github.com/segmentio/kafka-go"
+	"go.uber.org/zap"
 )
 
 type Producer struct {
 	scheduled *kafka.Writer
 	new       *kafka.Writer
+	logger    *zap.Logger
 }
 
-func NewProducer(brokers []string) (*Producer, error) {
+func NewProducer(brokers []string, logger *zap.Logger) (*Producer, error) {
 	if len(brokers) == 0 {
 		return nil, errors.Wrap(entities.ErrInvalidParams, "broker_producer: empty list of brokers")
+	}
+
+	if logger == nil {
+		logger = zap.NewNop()
 	}
 
 	return &Producer{
 		scheduled: &kafka.Writer{Addr: kafka.TCP(brokers...), Topic: string(usecase.TopicScheduled), Balancer: &kafka.LeastBytes{}},
 		new:       &kafka.Writer{Addr: kafka.TCP(brokers...), Topic: string(usecase.TopicNew), Balancer: &kafka.LeastBytes{}},
+		logger:    logger,
 	}, nil
 }
 
@@ -44,7 +49,9 @@ func (p *Producer) Produce(ctx context.Context, rate []entities.CurrencyRate, to
 	for _, r := range rate {
 		data, err := json.Marshal(r)
 		if err != nil {
-			log.Printf("%v: failed to marshal rate", entities.ErrMessagingFailure)
+			p.logger.Error("broker_producer: failed to marshal rate",
+				zap.Error(err),
+			)
 			continue
 		}
 		msgs = append(msgs, kafka.Message{Value: data})

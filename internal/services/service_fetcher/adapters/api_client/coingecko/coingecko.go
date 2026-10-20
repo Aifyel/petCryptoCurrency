@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
 
 	"github.com/Aifyel/petCryptoCurrency/internal/entities"
 )
@@ -25,9 +26,10 @@ type Client struct {
 	minInterval time.Duration
 	mu          sync.Mutex
 	lastRequest time.Time
+	logger      *zap.Logger
 }
 
-func NewClient(url string, minInterval time.Duration) (*Client, error) {
+func NewClient(url string, minInterval time.Duration, logger *zap.Logger) (*Client, error) {
 	if strings.TrimSpace(url) == "" {
 		return nil, errors.Wrap(entities.ErrInvalidParams, "coingecko client: invalid url")
 	}
@@ -35,13 +37,18 @@ func NewClient(url string, minInterval time.Duration) (*Client, error) {
 		return nil, errors.Wrap(entities.ErrInvalidParams, "coingecko client: invalid min interval")
 	}
 
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+
 	return &Client{
 		httpClient: &http.Client{
-			Timeout: time.Second * 10,
+			Timeout: 10 * time.Second,
 		},
 		baseURL:     url,
 		minInterval: minInterval,
 		lastRequest: time.Time{},
+		logger:      logger,
 	}, nil
 }
 
@@ -54,10 +61,17 @@ func (c *Client) Fetch(ctx context.Context, currencies []string) ([]entities.Cur
 	c.lastRequest = time.Now()
 	c.mu.Unlock()
 
-	ids := strings.Join(currencies, ",")
-	url := fmt.Sprintf(c.baseURL+"?ids=%s&vs_currencies=%s", ids, vsCurrency) //Изменить на net/url пакет
+	parsedURL, err := url.Parse(c.baseURL)
+	if err != nil {
+		return nil, errors.Wrap(entities.ErrInvalidParams, "coingecko: parse base url")
+	}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	query := parsedURL.Query()
+	query.Set("ids", strings.Join(currencies, ","))
+	query.Set("vs_currencies", vsCurrency)
+	parsedURL.RawQuery = query.Encode()
+
+	req, err := http.NewRequestWithContext(ctx, "GET", parsedURL.String(), nil)
 	if err != nil {
 		return nil, errors.Wrap(entities.ErrInvalidParams, "coingecko: build request")
 	}
@@ -66,7 +80,6 @@ func (c *Client) Fetch(ctx context.Context, currencies []string) ([]entities.Cur
 	if err != nil {
 		return nil, errors.Wrap(entities.ErrClientFailure, "coingecko: http request")
 	}
-
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -86,9 +99,13 @@ func (c *Client) Fetch(ctx context.Context, currencies []string) ([]entities.Cur
 			continue
 		}
 
-		rate, err := entities.NewCurrencyRate(id, price, time.Now())
+		rate, err := entities.NewCurrencyRate(id, price, time.Now().UTC())
 		if err != nil {
-			log.Printf("%v", errors.Wrap(entities.ErrInvalidParams, "coingecko: new currency rate"))
+			c.logger.Error("coingecko: new currency rate failed",
+				zap.String("currency", id),
+				zap.Float64("price", price),
+				zap.Error(err),
+			)
 			continue
 		}
 

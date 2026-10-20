@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Aifyel/petCryptoCurrency/deploy/config"
+	"github.com/Aifyel/petCryptoCurrency/internal/logger"
 	servicegrpc "github.com/Aifyel/petCryptoCurrency/internal/services/service_server_api/adapters/grpc"
 	"github.com/Aifyel/petCryptoCurrency/internal/services/service_server_api/adapters/repository/postgres"
 	ginservice "github.com/Aifyel/petCryptoCurrency/internal/services/service_server_api/ports/http/public/gin"
@@ -16,13 +17,14 @@ import (
 )
 
 func Run(ctx context.Context, cfg *config.Config) error {
-	logger, err := zap.NewProduction()
-	if err != nil {
-		return errors.Wrap(err, "server_api: unable to create logger")
+	if err := logger.InitLogger(false); err != nil {
+		return errors.Wrap(err, "failed to init logger")
 	}
 	defer logger.Sync()
 
-	repo, err := postgres.NewRepository(ctx, cfg.DatabaseURL)
+	logger.Log.Info("service_api is starting up...")
+
+	repo, err := postgres.NewRepository(ctx, cfg.DatabaseURL, logger.Log)
 	if err != nil {
 		return errors.Wrap(err, "server_api: unable to connect to postgres")
 	}
@@ -33,13 +35,12 @@ func Run(ctx context.Context, cfg *config.Config) error {
 		return errors.Wrap(err, "server_api: unable to create grpc client")
 	}
 	defer func(conn *grpc.ClientConn) {
-		err := conn.Close()
-		if err != nil {
-			logger.Error("server_api: unable to close grpc client connection", zap.Error(err))
+		if err := conn.Close(); err != nil {
+			logger.Log.Error("server_api: unable to close grpc client connection", zap.Error(err))
 		}
 	}(conn)
 
-	client, err := servicegrpc.NewClient(conn)
+	client, err := servicegrpc.NewClient(conn, logger.Log)
 	if err != nil {
 		return errors.Wrap(err, "server_api: unable to create grpc client")
 	}
@@ -49,7 +50,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 		return errors.Wrap(err, "server_api: unable to create new service")
 	}
 
-	server, err := ginservice.NewServer(cfg.HTTPPort, 5*time.Second, service, logger)
+	server, err := ginservice.NewServer(cfg.HTTPPort, 5*time.Second, service, logger.Log)
 	if err != nil {
 		return errors.Wrap(err, "server_api: unable to create gin server")
 	}

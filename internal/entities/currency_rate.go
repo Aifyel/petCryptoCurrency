@@ -12,7 +12,7 @@ type CurrencyRate struct {
 	FetchedAt time.Time
 }
 
-func NewCurrencyRate(c string, p float64, f time.Time) (*CurrencyRate, error) {
+func NewCurrencyRate(c string, p float64, t time.Time) (*CurrencyRate, error) {
 	if c == "" {
 		return nil, errors.Wrap(ErrInvalidParams, "currencyRate currency:")
 	}
@@ -23,6 +23,6 @@ func NewCurrencyRate(c string, p float64, f time.Time) (*CurrencyRate, error) {
 	return &CurrencyRate{
 		Currency:  c,
 		Price:     p,
-		FetchedAt: f,
+		FetchedAt: t.UTC(),
 	}, nil
 }

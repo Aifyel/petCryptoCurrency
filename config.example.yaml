@@ -1,0 +1,21 @@
+app:
+  env: "development" # development | production
+
+database:
+  url: "postgres://postgres:your_password@localhost:5432/project_db?sslmode=disable"
+
+kafka:
+  brokers:
+    - "localhost:9092"
+  group_id: "crypto-updater-group"
+
+fetcher:
+  grpc_port: ":50051"
+  coingecko:
+    url: "https://api.coingecko.com/api/v3/simple/price"
+    interval: "10s"
+
+api_server:
+  http_port: ":8080"
+  grpc_server_address: "localhost:50051"
+  request_timeout: "5s"

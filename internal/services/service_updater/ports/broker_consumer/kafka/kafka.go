@@ -19,5 +19,6 @@ func NewConsumer(brokers []string, groupID string) (*kafka.Reader, error) {
 		Brokers:     brokers,
 		GroupID:     groupID,
 		GroupTopics: []string{string(usecase.TopicScheduled), string(usecase.TopicNew)},
+		StartOffset: kafka.FirstOffset,
 	}), nil
 }

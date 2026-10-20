@@ -80,6 +80,10 @@ func (f *FetchService) FetchNewRates(ctx context.Context, currencies []string) (
 		return nil, errors.Wrap(entities.ErrClientFailure, "service_fetcher Client:")
 	}
 
+	if len(fetchedRates) == 0 {
+		return fetchedRates, nil
+	}
+
 	currency := make([]string, 0, len(fetchedRates))
 	for _, rate := range fetchedRates {
 		currency = append(currency, rate.Currency)
