@@ -15,11 +15,6 @@ type FetchService struct {
 	producer Producer
 }
 
-func (f *FetchService) mustEmbedUnimplementedFetcherServiceServer() {
-	//TODO implement me
-	panic("implement me")
-}
-
 func NewFetchService(
 	repo Repository,
 	client APIClient,

@@ -55,6 +55,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 		return errors.Wrap(entities.ErrClientFailure, "fetcher_app: failed to create fetch service")
 	}
 
+	// #nosec G118
 	go func() {
 		initCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()

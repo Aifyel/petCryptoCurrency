@@ -80,7 +80,9 @@ func (c *Client) Fetch(ctx context.Context, currencies []string) ([]entities.Cur
 	if err != nil {
 		return nil, errors.Wrap(entities.ErrClientFailure, "coingecko: http request")
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, errors.Wrap(entities.ErrClientFailure, fmt.Sprintf("coingecko: unexpected status %d", resp.StatusCode))

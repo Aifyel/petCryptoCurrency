@@ -17,9 +17,11 @@ type Repository struct {
 
 func NewRepository(ctx context.Context, connString string, logger *zap.Logger) (*Repository, error) {
 	if connString == "" {
+		return nil, errors.Wrap(entities.ErrInvalidParams, "coingecko: empty connection string")
 	}
 	pool, err := pgxpool.New(ctx, connString)
 	if err != nil {
+		return nil, errors.Wrap(entities.ErrInvalidParams, err.Error())
 	}
 
 	return &Repository{
