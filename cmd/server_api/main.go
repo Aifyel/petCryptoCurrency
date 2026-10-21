@@ -8,6 +8,11 @@ import (
 	"github.com/Aifyel/petCryptoCurrency/internal/services/service_server_api/app"
 )
 
+// @title Pet Crypto Currency API
+// @version 1.0
+// @description Микросервисное приложение для сбора и предоставления криптовалютной статистики.
+// @host localhost:8080
+// @BasePath /
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
