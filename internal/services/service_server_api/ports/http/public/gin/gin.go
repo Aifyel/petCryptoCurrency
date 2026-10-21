@@ -10,6 +10,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
+
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+
+	_ "github.com/Aifyel/petCryptoCurrency/docs"
 )
 
 type StatisticsService interface {
@@ -53,6 +58,9 @@ func NewServer(addr string, timeout time.Duration, service StatisticsService, lo
 func (s *Server) setupRouter() {
 	router := gin.New()
 	router.Use(gin.Recovery())
+
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	router.GET("/stats", s.GetStats)
 
 	s.serv.Handler = router
@@ -92,6 +100,18 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return s.serv.Shutdown(ctx)
 }
 
+// GetStats godoc
+// @Summary Получить статистику криптовалют
+// @Description Возвращает текущую, минимальную, максимальную цену и процент изменения за час для указанных криптовалют.
+// @Tags stats
+// @Accept json
+// @Produce json
+// @Param currencies query string true "Список криптовалют через запятую (например: bitcoin,ethereum)"
+// @Success 200 {array} entities.CurrencyStatistics
+// @Failure 400 {object} map[string]string "Ошибка валидации параметров"
+// @Failure 502 {object} map[string]string "Внешний сервис недоступен"
+// @Failure 500 {object} map[string]string "Внутренняя ошибка сервера"
+// @Router /stats [get]
 func (s *Server) GetStats(c *gin.Context) {
 	raw := c.Query("currencies")
 

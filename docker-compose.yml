@@ -58,6 +58,11 @@ services:
       KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
     networks:
       - crypto-net
+    healthcheck:
+      test: [ "CMD-SHELL", "nc -z localhost 9092 || exit 1" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   fetcher-service:
     build:
@@ -74,7 +79,7 @@ services:
       migration:
         condition: service_completed_successfully
       kafka:
-        condition: service_started
+        condition: service_healthy
     networks:
       - crypto-net
 
